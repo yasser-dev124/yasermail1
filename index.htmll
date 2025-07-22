@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>بريد مؤقت مميز</title>
+    <style>
+        body {
+            background: #111;
+            color: #fff;
+            font-family: 'Segoe UI', sans-serif;
+            text-align: center;
+            padding: 30px;
+        }
+        #email {
+            font-size: 20px;
+            margin: 20px 0;
+            padding: 10px;
+            border: 2px dashed #0f0;
+            display: inline-block;
+            background: #222;
+        }
+        .msg {
+            background: #222;
+            border: 1px solid #444;
+            margin: 10px auto;
+            padding: 10px;
+            width: 90%;
+            max-width: 600px;
+            text-align: left;
+        }
+        #copyBtn {
+            background-color: #0f0;
+            color: #000;
+            padding: 8px 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📧 بريد مؤقت بصيغة مميزة</h1>
+    <div id="email">جاري التوليد...</div>
+    <br>
+    <button id="copyBtn" onclick="copyEmail()">📋 نسخ البريد</button>
+    <h2>📨 الرسائل</h2>
+    <div id="messages">انتظر...</div>
+
+    <script>
+        let currentEmail = "";
+
+        async function getMail() {
+            const domainList = ["kdm1.com", "lwl.jp", "tutanota.com"];
+            const rand = Math.random().toString(36).substring(2, 9);
+            const randomDomain = domainList[Math.floor(Math.random() * domainList.length)];
+            const email = `${rand}@${randomDomain}`;
+            currentEmail = email;
+
+            const res = await fetch("https://api.mail.tm/accounts", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ address: email, password: "12345678" })
+            });
+
+            const tokenRes = await fetch("https://api.mail.tm/token", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ address: email, password: "12345678" })
+            });
+
+            const tokenData = await tokenRes.json();
+            const token = tokenData.token;
+
+            document.getElementById("email").innerText = email;
+
+            checkMessages(token);
+        }
+
+        async function checkMessages(token) {
+            const res = await fetch("https://api.mail.tm/messages", {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            const data = await res.json();
+            const msgs = data["hydra:member"];
+            const container = document.getElementById("messages");
+            container.innerHTML = "";
+
+            if (msgs.length === 0) {
+                container.innerHTML = "📭 لا توجد رسائل بعد";
+                setTimeout(() => checkMessages(token), 5000);
+                return;
+            }
+
+            msgs.forEach(msg => {
+                const div = document.createElement("div");
+                div.className = "msg";
+                div.innerHTML = `<strong>من:</strong> ${msg.from.address}<br><strong>الموضوع:</strong> ${msg.subject}<br><strong>المحتوى:</strong> ${msg.intro}`;
+                container.appendChild(div);
+            });
+        }
+
+        function copyEmail() {
+            navigator.clipboard.writeText(currentEmail).then(() => {
+                const btn = document.getElementById("copyBtn");
+                btn.innerText = "✅ تم النسخ!";
+                setTimeout(() => {
+                    btn.innerText = "📋 نسخ البريد";
+                }, 2000);
+            });
+        }
+
+        getMail();
+    </script>
+</body>
+</html>
